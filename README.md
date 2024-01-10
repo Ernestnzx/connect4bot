@@ -19,12 +19,13 @@ There are `4,531,985,219,092` legal game states possible encountered during play
 To effectively determine the best move in Connect 4, we need to explore a vast number of game states. To make this process efficient, it's crucial that the validation of a column and the end-of-game checks are optimized for speed. Therefore, our solution is to use unsigned 64-bit integer (unsigned long long/uint64_t) to represent the board. The reason is due to bitwise operations being extremely fast in modern-day computers
 
 ### Bitwise operations
-Left/Right shift operators (`<<`/`>>`): They are used to shift bits a certain number to the left and right respectively. They are extremely useful when it comes to setting up masks for checks.\
-e.g.\
+Left/Right shift operators `<<` / `>>`: They are used to shift bits a certain number to the left and right respectively. They are extremely useful when it comes to setting up masks for checks. For example.\
 `0b01110010 >> 3` results in `0b00001110`\
 `0b01110010 << 4` results in `0b00100000`
 
-AND operator: The position of a bit is only set to be `1` only if both bits are `1`. We can think of this operation as a `filter`, if we were to set the position of the bits that we want to check to be `1`, the position will be set to `1` if the other number has that bit in that position as `1`
+AND operator: The position of a bit is only set to be `1` only if both bits are `1`.\
+
+We can think of this operation as a `filter`, if we were to set the position of the bits that we want to check to be `1`, the position will be set to `1` if the other number has that bit in that position as `1`
 ```
   10101110
 & 00001111
@@ -33,16 +34,20 @@ AND operator: The position of a bit is only set to be `1` only if both bits are 
 
 In this example, we are checking if the least significant 4 bits are on
 ```
-OR operator: The position of a bit is set to `1` if at least one of the bits in the position is `1`. We can think of this operation as a `set`, if we were to set the position of the bits that we want on to be `1`, the output will be the number those bits turned on.
+OR operator: The position of a bit is set to `1` if at least one of the bits in the position is `1`.\
+
+We can think of this operation as a `set`, if we were to set the position of the bits that we want on to be `1`, the output will be the number those bits turned on.
 ```
   10101110
 | 00001111
 ----------
   10101111
 
-In this example, we are setting least significant 4 bits are on
+In this example, we are setting least significant 4 bits to be on
 ```
-XOR operator: The position of the bit is set to `1` if and only if a single bit in that position is `1`. This operation is useful if we want to "undo" a operation as we will discuss later.
+XOR operator: The position of the bit is set to `1` if and only if a single bit in that position is `1`.\
+
+This operation is useful if we want to "undo" a operation as we will discuss later.
 ```
   10101110
 ^ 00001111
@@ -62,7 +67,7 @@ To represent any given board state using a unsigned 64 bit integer, the bits rep
 | 0  7 14 21 28 35 42 | 49 56 63  bottom row
 +---------------------+
 ```
-To represent a board_state, only two unsigned 64 bit integer is needed as bitwise operations allow us to toggle between our opponent and our state.
+To represent a board_state, only two unsigned 64 bit integer is needed because by using bitwise operations, we can toggle between opponent and our current positon.
 
 ### Move function
 So given this board state and it is `O`'s turn to play and the tile is placed on column `4`
@@ -103,7 +108,7 @@ board mask                 curr_pos mask              FULL_BOARD_MASK           
 . . . . . . .              . . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              # # # # # # #              . . . . . . .
 . . . . . . .              . . . . . . .              # # # # # # #              . . . . # . .
-. . . . # . .       +      . . . . . . .       &      # # # # # # #              . . . # . . .
+. . . . # . .       +      . . . . . . .       &      # # # # # # #       =      . . . # . . .
 . . . # # . .              . . . . . . .              # # # # # # #              . . # . . . .
 . . # # # . .              # # # # # # #              # # # # # # #              # # . . . # #
 -------------              -------------              -------------              -------------
