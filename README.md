@@ -45,7 +45,7 @@ We can think of this operation as a `set`, if we were to set the position of the
 
 In this example, we are setting least significant 4 bits to be on
 ```
-XOR operator: The position of the bit is set to `1` if and only if a single bit in that position is `1`.\
+XOR operator: The position of the bit is set to `1` if and only if a single bit in that position is `1`.
 
 This operation is useful if we want to "undo" a operation. This will be a key feature in our `move()` function.
 ```
@@ -77,6 +77,7 @@ board state                curr_pos mask              board_mask mask
 . . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              . . . . . . .
+. . . . . . .              . . . . . . .              . . . . . . .
 . . . O X . .              . . . O . . .              . . . # # . .
 . . O X X . .              . . O . . . .              . . # # # . .
 -------------              -------------              -------------
@@ -87,6 +88,7 @@ the bits at position 14, 21, 22, 28, 29 are on for board_mask
 We will first toggle `curr_pos` mask using bitwise `XOR` before peforming bitwise `OR` on the `board_mask` to play the move, this results in the following changes to the two bitmasks
 ```
 board state                curr_pos mask              board_mask mask
+. . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              . . . . . . .
 . . . . . . .              . . . . . . .              . . . . . . .
@@ -106,6 +108,7 @@ With this, obtaining the mask for all possible moves follows the same logic:
 ```
 board mask                 curr_pos mask              FULL_BOARD_MASK            possible_move mask
 . . . . . . .              . . . . . . .              . . . . . . .              . . . . . . .
+. . . . . . .              . . . . . . .              # # # # # # #              . . . . . . .
 . . . . . . .              . . . . . . .              # # # # # # #              . . . . . . .
 . . . . . . .              . . . . . . .              # # # # # # #              . . . . # . .
 . . . . # . .       +      . . . . . . .       &      # # # # # # #       =      . . . # . . .
@@ -129,7 +132,7 @@ Now we are getting into the reason why we are using bitboards to represent the b
 | 0  7 14 21 28 35 42 | 49 56 63  bottom row
 +---------------------+
 ```
-Notice that to check for 4 in a row in the direction that we are interested in, they are being offset by a fix number of bits. As such, we are given this formula to check for winning moves 
+Notice that to check for 4 in a row in the direction that we are interested in, they are being offset by a fix number of bits. As such, we are given this boolean formula to check for winnning moves.
 ```cpp
 // dir must be one of the following values for the different winning checks
 // dir == 1 (vertical check)
@@ -140,7 +143,59 @@ bool is_game_over(uint64_t board, int dir) {
     return board & (board >> dir) & (board >> 2*dir) & (board >> 3*dir)
 }
 ```
-Where `dir` is the difference in offset that we are interested in. Imagine we are trying to layer different positions of a arbitrary position encoding with certain specific offsets to check for 4 in a row. As long as one of the position is not `1` the function will return `false`. This allows us to check for all position encodings with simple bitshifts operations as efficiently as possible.
+Where `dir` is the difference in offset that we are interested in. Imagine we are trying to layer encoded positions of positions corresponding to 4 in a row of any arbitrary positions. As long as one of the position is not `1` the function will return `false`. This allows us to check for all position encodings with simple bitshifts operations as efficiently as possible.
 
-## Negamax Algorithm
-I'll write some time later (bitboard took a super long time)
+This idea can be extended into `calculate_winning_moves()`. The function here calculates the number of possible winning positions given a position. This is achieved by bitshifting encoded positions into another position that is expected to be empty. If the value is non-zero, we have a 3 in a row. Otherwise, there isn't any winning position in a given board position.
+```cpp
+uint64_t BitBoard::compute_winning_moves(uint64_t pos, uint64_t mask) {
+    // checking for 3 in a row, with one tile missing
+    uint64_t r = (pos << 1) & (pos << 2) & (pos << 3), t;
+    for (int dir : direction) {
+        t = (pos << dir) & (pos << 2*dir);
+        r |= t & (pos << 3*dir);
+        r |= t & (pos >> dir);
+        t >>= 3*dir;
+        r |= t & (pos << dir);
+        r |= t & (pos >> 3*dir);
+    }
+    return r & (FULL_BOARD_MASK ^ mask);
+}
+```
+## Adversarial Game Search
+In adversarial game search, a technique widely utilized in AI for strategic games, the computer simulates each player's moves to identify a winning strategy. This approach is particularly relevant in two-player, turn-based games where the objective is to outmaneuver the opponent. 
+
+Ideally, the search will continue until it reaches a leaf node (won/lose/draw). However, games with huge game spaces, it is infeasible to continue searching till terminal game states as doing so would require an impractical amount of computational resources and time. This is particularly true for complex games where the number of possible moves and outcomes grows exponentially. 
+
+To address this, strategies like heuristic evaluation and depth-limited search are implemented, allowing the algorithm to make educated guesses about the game's outcome without exhaustively exploring every possible state. These methods enable the handling of large game spaces by approximating the best moves in a more computationally manageable manner.
+
+However, for this implementation, with some of the techniques I'll be discussing will allow us to visit terminal states with reasonable amount of time. As such, there is no need for a heuristic evaluation function.
+
+### Negamax Algorithm
+Many adversarial two player games are considered to be zero-sum games. In the context of game theory, a zero-sum game is a situation where one participant's gain or loss is exactly balanced by the losses or gains of the other participants. Essentially, the total amount of benefit and loss in any situation is zero. This concept is particularly relevant in competitive games like chess or Connect 4, where one player's victory is inherently another player's defeat.
+
+In such scenarios, we often use the [Negamax algorithm](https://en.wikipedia.org/wiki/Negamax), which is a simplified variation of the Minimax algorithm. The principle behind Negamax is based on the zero-sum nature of the game: the player's best move is the one that is the worst for their opponent. Since the gain for one player results in an equivalent loss for the other, we can evaluate the game state from a single player's perspective and multiply the evaluation by -1 for the opposing player. Or more formally, `min(alpha, beta) = -max(-beta, alpha)`
+
+This simplifies the implementation of the algorithm, as we only need to consider the maximization of a single utility function, rather than alternating between minimization and maximization. Negamax is efficient and effective in determining the optimal move in zero-sum game scenarios. The pseudocode of Negamax is given as such.
+
+```
+function negamax(node, depth, color) is
+    if depth = 0 or node is a terminal node then
+        return color × the heuristic value of node
+    value := −∞
+    for each child of node do
+        value := max(value, −negamax(child, depth − 1, −color))
+    return value
+
+from https://en.wikipedia.org/wiki/Negamax
+```
+
+### Alpha-Beta pruning
+Alpha-Beta pruning is a technique that significantly enhances the efficiency of the Negamax algorithm, which is itself a variation of the Minimax algorithm tailored for zero-sum games. In Negamax, since the players' goals are directly opposing, the algorithm simplifies the search by using a single evaluation function for both players, differing only by sign.
+
+Alpha-Beta pruning comes into play by eliminating branches in the game tree that do not need to be explored. It does this through two values:
+
+1. Alpha (α): The best value that the maximizer (current player) can guarantee at that level or above.
+
+2. Beta (β): The best value that the minimizer (opponent) can guarantee at that level or above.
+
+During the search, if Alpha becomes greater than or equal to Beta (α ≥ β), it means that the current player has a better option available at a higher level of the tree. Thus, the algorithm can stop considering the current branch, as it will not influence the final decision. This "pruning" reduces the number of nodes that the Negamax algorithm must evaluate, thus speeding up the search process.
