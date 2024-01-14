@@ -36,6 +36,9 @@ std::pair<int,int> get_best_moves(uint64_t key, std::string board_state) {
     board.move(board_state);
     int best_score = -1e9, best_move = -1;
     uint64_t next_moves = board.get_non_losing_moves();
+    if (next_moves == 0) {
+        return {0, board.get_losing_score()};
+    }
     for (int m : moves) {
         if (uint64_t move_mask = board.get_move_mask(next_moves, m)) {
             BitBoard next_board(board);
