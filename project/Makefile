@@ -1,11 +1,11 @@
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -std=c++17 -Ofast
+CXXFLAGS = -Wall -Wextra -std=c++17 -Ofast -pthread
 OBJDIR = obj
 EXECUTABLES = connect4 openingbook generator
 
 # Source files for each executable
 SOURCES_connect4 = main.cpp $(filter-out openingbook.cpp generator.cpp, $(wildcard *.cpp))
-SOURCES_openingbook = openingbook.cpp $(filter-out main.cpp generator.cpp,$(wildcard *.cpp))
+SOURCES_openingbook = openingbook.cpp $(filter-out main.cpp generator.cpp, $(wildcard *.cpp))
 SOURCES_generator= generator.cpp $(filter-out openingbook.cpp main.cpp, $(wildcard *.cpp))
 
 # Object files for each executable

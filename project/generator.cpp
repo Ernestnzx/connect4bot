@@ -38,8 +38,8 @@ int generate_book(int depth, BitBoard &board, std::string board_state) {
 }
 
 int main() {
-    std::ifstream input("../opening_book/book.txt");
-    std::ofstream output("../opening_book/final_book.txt");
+    std::ifstream input("../opening_book/10_ply_book.txt");
+    std::ofstream output("../opening_book/10_ply_book.txt");
     if (!input.is_open()) {
         printf("Book file is not present in the same directory.\n Terminating...\n");
         return 1;
@@ -48,11 +48,12 @@ int main() {
     uint64_t board_key; 
     std::string board_state;
     while (input >> board_key >> board_state >> move >> score) {
+        assert(board_state.length() == 10);
         book[board_key] = {board_state, move, score};
     }
     input.close();
     BitBoard board;
-    generate_book(7, board, "");
+    generate_book(10, board, "");
     for (auto &[k,v] : book) {
         auto[a,b,c] = v;
         output << k << ' ' << a << ' ' << b << ' ' << c << '\n';
